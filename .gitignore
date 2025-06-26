@@ -1,0 +1,10 @@
+# Node
+package-lock.json
+node_modules
+dist
+
+# Environment
+.env
+
+# macOS
+.DS_Store
