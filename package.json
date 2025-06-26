@@ -11,9 +11,10 @@
   "author": "@_patrickpc",
   "license": "MIT",
   "devDependencies": {
+    "@electron/notarize": "^3.0.1",
+    "dotenv": "^16.5.0",
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1",
-    "electron-notarize": "^1.2.2"
+    "electron-builder": "^24.9.1"
   },
   "dependencies": {
     "electron-is-dev": "^2.0.0",
@@ -31,6 +32,7 @@
       "entitlementsInherit": "./entitlements.mac.plist",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "notarize": false,
       "target": [
         {
           "target": "dmg",
