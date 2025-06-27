@@ -43,7 +43,16 @@ document.addEventListener("keydown", handleKeydown);
 
 // Event Handlers
 function handleSizeChange(event) {
-  ipcRenderer.send("set_window_size", event.target.value);
+  const newSize = event.target.value;
+  ipcRenderer.send("set_window_size", newSize);
+  
+  // Toggle sidebar mode class
+  if (newSize === "sidebar") {
+    document.body.classList.add("sidebar-mode");
+  } else {
+    document.body.classList.remove("sidebar-mode");
+  }
+  
   event.target.blur();
 }
 
@@ -216,6 +225,13 @@ ipcRenderer.on("config", (event, config) => {
   hotkeyTest = convertElectronShortcutToDisplay(config.hotkey);
   sizeSelect.value = config.sizeKey;
   appVersion.textContent = `v${config.appVersion}`;
+  
+  // Set sidebar mode class if needed
+  if (config.sizeKey === "sidebar") {
+    document.body.classList.add("sidebar-mode");
+  } else {
+    document.body.classList.remove("sidebar-mode");
+  }
 });
 
 ipcRenderer.on("urls-data", (event, urls) => {

@@ -237,3 +237,9 @@ input {
 #pinButton.pinned {
   opacity: 1;
 }
+
+/* Sidebar mode adjustments */
+body.sidebar-mode #hotkeyRecorder,
+body.sidebar-mode #appVersion {
+  display: none;
+}

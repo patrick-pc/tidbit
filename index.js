@@ -57,6 +57,7 @@ const windowSizes = {
   small: { width: 1000, height: 600 },
   medium: { width: 1250, height: 750 },
   large: { width: 1500, height: 900 },
+  sidebar: { width: 0, height: 0 }, // Will be calculated dynamically
 };
 
 // Application State
@@ -87,7 +88,18 @@ app.on("ready", async () => {
 
 // Create Main Window
 async function createMainWindow() {
-  const storedSize = store.get("windowSize", windowSizes.medium);
+  const storedSizeKey = store.get("windowSizeKey", "medium");
+  let storedSize = windowSizes[storedSizeKey];
+  
+  // Handle sidebar size dynamically
+  if (storedSizeKey === "sidebar") {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    storedSize = {
+      width: Math.floor(primaryDisplay.workArea.width / 3),
+      height: primaryDisplay.workArea.height
+    };
+  }
+  
   mainWindow = new BrowserWindow(getWindowConfig(storedSize));
 
   mainWindow.loadFile("./index.html");
@@ -137,6 +149,16 @@ function getWindowConfig(size) {
 
 // Setup Browser View
 function setupBrowserView(size) {
+  // Handle sidebar size if needed
+  const sizeKey = store.get("windowSizeKey", "medium");
+  if (sizeKey === "sidebar") {
+    const activeDisplay = screen.getPrimaryDisplay();
+    size = {
+      width: Math.floor(activeDisplay.workArea.width / 3),
+      height: activeDisplay.workArea.height
+    };
+  }
+  
   // Get domains from store
   const domains = store.get("urls");
 
@@ -255,7 +277,7 @@ function setConfig(mainWindow) {
     const currentSize = store.get("windowSize", { width: 1250, height: 750 });
 
     // Determine the size key based on the received size
-    const sizeKey =
+    const sizeKey = store.get("windowSizeKey") ||
       Object.keys(windowSizes).find((key) => {
         return (
           windowSizes[key].width === currentSize.width &&
@@ -290,6 +312,17 @@ function showWindow() {
   const activeDisplay = screen.getDisplayNearestPoint(
     screen.getCursorScreenPoint()
   );
+  
+  // Handle sidebar size but not positioning (let saved position work)
+  const sizeKey = store.get("windowSizeKey", "medium");
+  if (sizeKey === "sidebar") {
+    // Update size to match current screen
+    const sidebarWidth = Math.floor(activeDisplay.workArea.width / 3);
+    const sidebarHeight = activeDisplay.workArea.height;
+    
+    mainWindow.setSize(sidebarWidth, sidebarHeight, true);
+    // Don't override position - let the normal positioning logic handle it
+  }
   
   let shouldCenterOnScreen = alwaysOnCurrentScreen;
   
@@ -382,10 +415,38 @@ ipcMain.on("set_hotkey", (event, arg) => {
 });
 
 ipcMain.on("set_window_size", (event, sizeKey) => {
-  const size = windowSizes[sizeKey];
+  let size = windowSizes[sizeKey];
+  const previousSizeKey = store.get("windowSizeKey");
+  
+  if (sizeKey === "sidebar") {
+    // Calculate sidebar dimensions dynamically
+    const activeDisplay = screen.getDisplayNearestPoint(
+      screen.getCursorScreenPoint()
+    );
+    size = {
+      width: Math.floor(activeDisplay.workArea.width / 3),
+      height: activeDisplay.workArea.height
+    };
+  }
+  
   if (size) {
     mainWindow.setSize(size.width, size.height, true);
     store.set("windowSize", size);
+    store.set("windowSizeKey", sizeKey); // Store the key as well
+    
+    // If switching TO sidebar from another size, position on right
+    // But if already on sidebar, keep current position
+    if (sizeKey === "sidebar" && previousSizeKey !== "sidebar") {
+      const activeDisplay = screen.getDisplayNearestPoint(
+        screen.getCursorScreenPoint()
+      );
+      const sidebarWidth = size.width;
+      mainWindow.setPosition(
+        activeDisplay.workArea.x + activeDisplay.workArea.width - sidebarWidth,
+        activeDisplay.workArea.y
+      );
+    }
+    
     // Resize all browser views
     Object.values(browserViews).forEach((view) => {
       view.setBounds({
@@ -395,7 +456,11 @@ ipcMain.on("set_window_size", (event, sizeKey) => {
         height: size.height - 50,
       });
     });
-    showWindow();
+    
+    // Don't call showWindow if already visible to avoid repositioning
+    if (!mainWindow.isVisible()) {
+      showWindow();
+    }
   }
 });
 
