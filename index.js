@@ -33,6 +33,16 @@ const schema = {
     type: "string",
     default: "Cmd+E",
   },
+  urls: {
+    type: "object",
+    default: {
+      url1: "https://chatgpt.com/",
+      url2: "https://claude.ai/",
+      url3: "https://tidbit.ai/",
+      url4: "https://aistudio.google.com/",
+      url5: "https://notion.so/",
+    },
+  },
 };
 const store = new Store({ schema });
 const windowSizes = {
@@ -44,6 +54,8 @@ const windowSizes = {
 // Application State
 let mainWindow;
 let browserView;
+let browserViews = {};
+let currentViewKey = "url1";
 
 // Application Ready
 app.on("ready", async () => {
@@ -101,82 +113,115 @@ function getWindowConfig(size) {
 
 // Setup Browser View
 function setupBrowserView(size) {
-  browserView = new BrowserView({
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      webSecurity: true,
-    },
+  // Get domains from store
+  const domains = store.get("urls");
+
+  // Create a BrowserView for each domain
+  Object.entries(domains).forEach(([key, url]) => {
+    log.info(`Creating BrowserView for ${key}: ${url}`);
+    const view = new BrowserView({
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: true,
+      },
+    });
+
+    view.setBounds({
+      x: 0,
+      y: 50,
+      width: size.width,
+      height: size.height - 50,
+    });
+
+    view.webContents.loadURL(url);
+    log.info(`Loading URL for ${key}: ${url}`);
+
+    // Add tidbit-specific code for url1
+    if (key === "url1") {
+      view.webContents.on("dom-ready", (event) => {
+        log.debug("DOM is ready");
+        view.webContents
+          .executeJavaScript(
+            `
+            (function() {
+              let alertShown = false;
+
+
+              function showAlert() {
+                if (!alertShown) {
+                  alert('Please sign in with email instead.');
+
+                  alertShown = true;
+                  setTimeout(() => {
+                    alertShown = false;
+                  }, 500);
+                }
+              }
+      
+              function setupListeners() {
+                console.log('Setting up listeners');
+                
+                document.body.addEventListener('click', (event) => {
+                  console.log('Body click event:', event.target);
+                  if (event.target.matches('button[data-testid="login-with-google"]')) {
+                    console.log('Google login button clicked (from body listener)');
+                    showAlert();
+                  }
+                }, true);
+              }
+      
+              setupListeners();
+            })();
+          `
+          )
+          .catch((err) => {
+            log.error("Error executing JavaScript:", err);
+          });
+      });
+    }
+
+    view.webContents.on(
+      "console-message",
+      (event, level, message, line, sourceId) => {
+        log.debug(`Console message from webContents (${level}): ${message}`);
+      }
+    );
+
+    view.webContents.setWindowOpenHandler(({ url }) => {
+      if (
+        url.startsWith("https://accounts.google.com/") ||
+        url.includes("google.com/signin/") ||
+        url.includes("accounts.google.com/o/oauth2/")
+      ) {
+        return { action: "deny" };
+      } else {
+        shell.openExternal(url);
+        return { action: "deny" };
+      }
+    });
+
+    // Store the view
+    browserViews[key] = view;
   });
+
+  // Set initial view to url1
+  browserView = browserViews.url1;
   mainWindow.setBrowserView(browserView);
+
+  // Force the view to be visible
   browserView.setBounds({
     x: 0,
     y: 50,
     width: size.width,
     height: size.height - 50,
   });
-  browserView.webContents.loadURL("https://tidbit.ai/");
-  browserView.webContents.on("dom-ready", (event) => {
-    log.debug("DOM is ready");
-    browserView.webContents
-      .executeJavaScript(
-        `
-        (function() {
-          let alertShown = false;
 
-
-          function showAlert() {
-            if (!alertShown) {
-              alert('Please sign in with email instead.');
-
-              alertShown = true;
-              setTimeout(() => {
-                alertShown = false;
-              }, 500);
-            }
-          }
-  
-          function setupListeners() {
-            console.log('Setting up listeners');
-            
-            document.body.addEventListener('click', (event) => {
-              console.log('Body click event:', event.target);
-              if (event.target.matches('button[data-testid="login-with-google"]')) {
-                console.log('Google login button clicked (from body listener)');
-                showAlert();
-              }
-            }, true);
-          }
-  
-          setupListeners();
-        })();
-      `
-      )
-      .catch((err) => {
-        log.error("Error executing JavaScript:", err);
-      });
-  });
-
-  browserView.webContents.on(
-    "console-message",
-    (event, level, message, line, sourceId) => {
-      log.debug(`Console message from webContents (${level}): ${message}`);
-    }
+  log.info(
+    `Initial view set to url1. Total views created: ${
+      Object.keys(browserViews).length
+    }`
   );
-
-  browserView.webContents.setWindowOpenHandler(({ url }) => {
-    if (
-      url.startsWith("https://accounts.google.com/") ||
-      url.includes("google.com/signin/") ||
-      url.includes("accounts.google.com/o/oauth2/")
-    ) {
-      // browserView.webContents.loadURL(url);
-      return { action: "deny" };
-    } else {
-      shell.openExternal(url);
-      return { action: "deny" };
-    }
-  });
 }
 
 function setConfig(mainWindow) {
@@ -255,14 +300,15 @@ ipcMain.on("set_window_size", (event, sizeKey) => {
   if (size) {
     mainWindow.setSize(size.width, size.height, true);
     store.set("windowSize", size);
-    if (browserView) {
-      browserView.setBounds({
+    // Resize all browser views
+    Object.values(browserViews).forEach((view) => {
+      view.setBounds({
         x: 0,
         y: 50,
         width: size.width,
         height: size.height - 50,
       });
-    }
+    });
     showWindow();
   }
 });
@@ -283,6 +329,83 @@ ipcMain.on("quit", () => {
   app.quit();
 });
 
+ipcMain.on("get-urls", (event) => {
+  const urls = store.get("urls");
+  event.reply("urls-data", urls);
+});
+
+ipcMain.on("hide-browser-view", () => {
+  if (browserView) {
+    mainWindow.removeBrowserView(browserView);
+  }
+});
+
+ipcMain.on("show-browser-view", () => {
+  if (browserView && mainWindow) {
+    mainWindow.setBrowserView(browserView);
+
+    // Force bounds update to ensure it's visible
+    const size = store.get("windowSize", windowSizes.medium);
+    browserView.setBounds({
+      x: 0,
+      y: 50,
+      width: size.width,
+      height: size.height - 50,
+    });
+
+    // Force focus
+    browserView.webContents.focus();
+  }
+});
+
+ipcMain.on("update-urls", (event, urls) => {
+  // Save new URLs to store
+  store.set("urls", urls);
+
+  // Recreate all browser views with new URLs
+  const currentKey = currentViewKey;
+
+  // Remove all current views
+  if (browserView) {
+    mainWindow.removeBrowserView(browserView);
+  }
+
+  // Clear existing views
+  browserViews = {};
+
+  // Recreate views with new URLs
+  const storedSize = store.get("windowSize", windowSizes.medium);
+  setupBrowserView(storedSize);
+
+  // Switch back to the same view
+  currentViewKey = ""; // Force switch
+  const switchToView = (key) => {
+    if (currentViewKey === key) return;
+
+    if (!browserViews[key]) return;
+
+    if (browserView) {
+      mainWindow.removeBrowserView(browserView);
+    }
+
+    currentViewKey = key;
+    browserView = browserViews[key];
+    mainWindow.setBrowserView(browserView);
+
+    const size = store.get("windowSize", windowSizes.medium);
+    browserView.setBounds({
+      x: 0,
+      y: 50,
+      width: size.width,
+      height: size.height - 50,
+    });
+
+    browserView.webContents.focus();
+  };
+
+  switchToView(currentKey);
+});
+
 // Event Listeners
 app.on("browser-window-focus", () => {
   globalShortcut.register("Cmd+W", () => {
@@ -300,6 +423,63 @@ app.on("browser-window-focus", () => {
   globalShortcut.register("F5", () => {
     browserView.webContents.reload();
   });
+
+  // Helper function to switch views
+  const switchToView = (key) => {
+    if (currentViewKey === key) return; // Already on this view
+
+    log.info(`Switching from ${currentViewKey} to ${key}`);
+
+    if (!browserViews[key]) {
+      log.error(`BrowserView for ${key} not found!`);
+      return;
+    }
+
+    // Remove current view
+    if (browserView) {
+      mainWindow.removeBrowserView(browserView);
+    }
+
+    // Set new view
+    currentViewKey = key;
+    browserView = browserViews[key];
+    mainWindow.setBrowserView(browserView);
+
+    // Force bounds update
+    const size = store.get("windowSize", windowSizes.medium);
+    browserView.setBounds({
+      x: 0,
+      y: 50,
+      width: size.width,
+      height: size.height - 50,
+    });
+
+    // Force focus
+    browserView.webContents.focus();
+
+    log.info(`Switched to ${key} view`);
+  };
+
+  // Domain navigation shortcuts
+  globalShortcut.register("Cmd+1", () => {
+    switchToView("url1");
+  });
+
+  globalShortcut.register("Cmd+2", () => {
+    switchToView("url2");
+  });
+
+  globalShortcut.register("Cmd+3", () => {
+    switchToView("url3");
+  });
+
+  globalShortcut.register("Cmd+4", () => {
+    switchToView("url4");
+  });
+
+  globalShortcut.register("Cmd+5", () => {
+    switchToView("url5");
+  });
 });
 
 app.on("browser-window-blur", () => {
@@ -307,6 +487,11 @@ app.on("browser-window-blur", () => {
   globalShortcut.unregister("Cmd+R");
   globalShortcut.unregister("Cmd+Shift+R");
   globalShortcut.unregister("F5");
+  globalShortcut.unregister("Cmd+1");
+  globalShortcut.unregister("Cmd+2");
+  globalShortcut.unregister("Cmd+3");
+  globalShortcut.unregister("Cmd+4");
+  globalShortcut.unregister("Cmd+5");
 });
 
 autoUpdater.on("update-available", (event) => {

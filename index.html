@@ -43,9 +43,81 @@
           </select>
         </div>
 
+        <button id="settingsButton" aria-label="Settings">
+          <i class="icon" data-lucide="settings"></i>
+        </button>
+
         <div id="appVersion">v0.0.1</div>
       </div>
     </header>
+
+    <!-- Settings Dialog -->
+    <div id="settingsDialog" class="dialog-overlay" style="display: none">
+      <div class="dialog-container">
+        <h2 class="dialog-title">URL Configuration</h2>
+
+        <div class="dialog-content">
+          <div class="url-input-group">
+            <label for="url1">Cmd+1 URL</label>
+            <input
+              type="url"
+              id="url1"
+              class="url-input"
+              placeholder="https://chatgpt.com/"
+            />
+          </div>
+
+          <div class="url-input-group">
+            <label for="url2">Cmd+2 URL</label>
+            <input
+              type="url"
+              id="url2"
+              class="url-input"
+              placeholder="https://claude.ai/"
+            />
+          </div>
+
+          <div class="url-input-group">
+            <label for="url3">Cmd+3 URL</label>
+            <input
+              type="url"
+              id="url3"
+              class="url-input"
+              placeholder="https://tidbit.ai/"
+            />
+          </div>
+
+          <div class="url-input-group">
+            <label for="url4">Cmd+4 URL</label>
+            <input
+              type="url"
+              id="url4"
+              class="url-input"
+              placeholder="https://aistudio.google.com/"
+            />
+          </div>
+
+          <div class="url-input-group">
+            <label for="url5">Cmd+5 URL</label>
+            <input
+              type="url"
+              id="url5"
+              class="url-input"
+              placeholder="https://notion.so/"
+            />
+          </div>
+        </div>
+
+        <div class="dialog-buttons">
+          <button id="cancelButton" class="dialog-button dialog-button-cancel">
+            Cancel
+          </button>
+          <button id="saveButton" class="dialog-button dialog-button-save">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
 
     <script src="./renderer.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>

@@ -12,6 +12,10 @@ const forwardButton = document.getElementById("forwardButton");
 const sizeSelect = document.getElementById("sizeSelect");
 const hotkeyRecorder = document.getElementById("hotkeyRecorder");
 const appVersion = document.getElementById("appVersion");
+const settingsButton = document.getElementById("settingsButton");
+const settingsDialog = document.getElementById("settingsDialog");
+const saveButton = document.getElementById("saveButton");
+const cancelButton = document.getElementById("cancelButton");
 
 // Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
@@ -21,6 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
   sizeSelect.addEventListener("change", handleSizeChange);
   recordButton.addEventListener("click", toggleRecording);
   document.addEventListener("click", cancelRecordingOnClick);
+  
+  // Settings dialog handlers
+  settingsButton.addEventListener("click", showSettingsDialog);
+  saveButton.addEventListener("click", saveSettings);
+  cancelButton.addEventListener("click", hideSettingsDialog);
+  
+  // Load current URLs
+  loadCurrentURLs();
 });
 
 document.addEventListener("keydown", handleKeydown);
@@ -92,7 +104,7 @@ function updateRecordingUI() {
   if (recording) {
     hotkeyDisplay.value = "Press Shortcut";
     recordButton.textContent = "Stop Recording";
-    hotkeyRecorder.style.borderColor = "#19c37d";
+    hotkeyRecorder.style.borderColor = "#82A1C1";
   } else {
     hotkeyDisplay.value = hotkeyTest;
     recordButton.textContent = "Toggle Global";
@@ -165,10 +177,47 @@ function convertElectronShortcutToDisplay(shortcut) {
     .join(" ");
 }
 
-// IPC Renderer Event
+// Settings Dialog Functions
+function showSettingsDialog() {
+  settingsDialog.style.display = "flex";
+  ipcRenderer.send("hide-browser-view");
+  lucide.createIcons();
+}
+
+function hideSettingsDialog() {
+  settingsDialog.style.display = "none";
+  ipcRenderer.send("show-browser-view");
+}
+
+function loadCurrentURLs() {
+  ipcRenderer.send("get-urls");
+}
+
+function saveSettings() {
+  const urls = {
+    url1: document.getElementById("url1").value || "https://chatgpt.com/",
+    url2: document.getElementById("url2").value || "https://claude.ai/",
+    url3: document.getElementById("url3").value || "https://tidbit.ai/",
+    url4: document.getElementById("url4").value || "https://aistudio.google.com/",
+    url5: document.getElementById("url5").value || "https://notion.so/",
+  };
+  
+  ipcRenderer.send("update-urls", urls);
+  hideSettingsDialog();
+}
+
+// IPC Renderer Events
 ipcRenderer.on("config", (event, config) => {
   hotkeyDisplay.value = convertElectronShortcutToDisplay(config.hotkey);
   hotkeyTest = convertElectronShortcutToDisplay(config.hotkey);
   sizeSelect.value = config.sizeKey;
   appVersion.textContent = `v${config.appVersion}`;
+});
+
+ipcRenderer.on("urls-data", (event, urls) => {
+  document.getElementById("url1").value = urls.url1;
+  document.getElementById("url2").value = urls.url2;
+  document.getElementById("url3").value = urls.url3;
+  document.getElementById("url4").value = urls.url4;
+  document.getElementById("url5").value = urls.url5;
 });

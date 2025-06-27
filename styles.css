@@ -32,7 +32,7 @@ input {
 }
 
 #linkInput:focus {
-  border-color: #19c37d;
+  border-color: #82a1c1;
 }
 
 .navWrapper {
@@ -87,6 +87,10 @@ input {
   border-radius: 3px 0 0 3px;
 }
 
+#hotkeyRecorder.recording {
+  border-color: #82a1c1;
+}
+
 #sizeSelectWrapper {
   display: flex;
   justify-content: center;
@@ -104,5 +108,108 @@ input {
 }
 
 #sizeSelectWrapper select:focus {
-  outline: 1px solid #19c37d;
+  outline: 1px solid #82a1c1;
+}
+
+/* Settings Dialog */
+.dialog-overlay {
+  position: fixed;
+  top: 50px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 50px);
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.dialog-container {
+  background-color: #202123;
+  border-radius: 8px;
+  padding: 24px;
+  width: 80%;
+  max-width: 450px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  margin: 20px;
+}
+
+.dialog-title {
+  color: #ececf1;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.url-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.url-input-group label {
+  color: #ececf1;
+  font-size: 12px;
+  /* font-weight: 400; */
+  opacity: 0.75;
+}
+
+.url-input {
+  background-color: transparent;
+  border: 1px solid #373738;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #ececf1;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.url-input:focus {
+  border-color: #82a1c1;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.dialog-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: background-color 0.2s;
+}
+
+.dialog-button-cancel {
+  background-color: transparent;
+  color: #ececf1;
+  border: 1px solid #373738;
+}
+
+.dialog-button-cancel:hover {
+  background-color: #2e2f33;
+}
+
+.dialog-button-save {
+  background-color: #82a1c1;
+  color: white;
+}
+
+.dialog-button-save:hover {
+  background-color: #6b8aaa;
 }
