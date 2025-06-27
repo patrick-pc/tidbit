@@ -43,6 +43,14 @@ const schema = {
       url5: "https://notion.so/",
     },
   },
+  windowPosition: {
+    type: ["object", "null"],
+    default: null
+  },
+  alwaysShowOnCurrentScreen: {
+    type: "boolean",
+    default: false
+  }
 };
 const store = new Store({ schema });
 const windowSizes = {
@@ -56,6 +64,7 @@ let mainWindow;
 let browserView;
 let browserViews = {};
 let currentViewKey = "url1";
+let positionTimer;
 
 // Application Ready
 app.on("ready", async () => {
@@ -85,6 +94,16 @@ async function createMainWindow() {
   setupBrowserView(storedSize);
 
   mainWindow.on("blur", () => hideWindow());
+  
+  // Track window position changes
+  mainWindow.on("move", () => {
+    clearTimeout(positionTimer);
+    positionTimer = setTimeout(() => {
+      const [x, y] = mainWindow.getPosition();
+      store.set("windowPosition", { x, y });
+    }, 100); // Reduced debounce for faster saves
+  });
+  
   setupGlobalShortcuts();
   if (process.platform === "darwin") app.dock.hide();
   else mainWindow.setSkipTaskbar(true);
@@ -261,23 +280,85 @@ function toggleWindow() {
 
 // Show Window
 function showWindow() {
+  const savedPosition = store.get("windowPosition");
+  const alwaysOnCurrentScreen = store.get("alwaysShowOnCurrentScreen");
   const activeDisplay = screen.getDisplayNearestPoint(
     screen.getCursorScreenPoint()
   );
-  const [currentWidth, currentHeight] = mainWindow.getSize();
-  const windowX = Math.round(
-    activeDisplay.bounds.x + (activeDisplay.bounds.width - currentWidth) / 2
-  );
-  const windowY = Math.round(
-    activeDisplay.bounds.y + (activeDisplay.bounds.height - currentHeight) / 2
-  );
-
-  mainWindow.setPosition(windowX, windowY);
+  
+  let shouldCenterOnScreen = alwaysOnCurrentScreen;
+  
+  // If not always on current screen, check if saved position is valid
+  if (!alwaysOnCurrentScreen && savedPosition) {
+    // Check if position is on the current display
+    if (!isPositionOnDisplay(savedPosition, activeDisplay)) {
+      shouldCenterOnScreen = true;
+    }
+  } else if (!savedPosition) {
+    shouldCenterOnScreen = true;
+  }
+  
+  if (shouldCenterOnScreen) {
+    // Center on current screen
+    const [currentWidth, currentHeight] = mainWindow.getSize();
+    const windowX = Math.round(
+      activeDisplay.bounds.x + (activeDisplay.bounds.width - currentWidth) / 2
+    );
+    const windowY = Math.round(
+      activeDisplay.bounds.y + (activeDisplay.bounds.height - currentHeight) / 2
+    );
+    mainWindow.setPosition(windowX, windowY);
+  } else {
+    // Use saved position
+    mainWindow.setPosition(savedPosition.x, savedPosition.y);
+  }
+  
   mainWindow.show();
+  
+  // Update position after showing (fixes incorrect position bug)
+  setTimeout(() => {
+    const [x, y] = mainWindow.getPosition();
+    store.set("windowPosition", { x, y });
+  }, 100);
+}
+
+// Check if position is on a specific display
+function isPositionOnDisplay(position, display) {
+  const [windowWidth, windowHeight] = mainWindow.getSize();
+  const windowBounds = {
+    x: position.x,
+    y: position.y,
+    width: windowWidth,
+    height: windowHeight
+  };
+  
+  const { x, y, width, height } = display.bounds;
+  
+  // Check if at least 50% of the window would be visible on this display
+  const overlapLeft = Math.max(windowBounds.x, x);
+  const overlapRight = Math.min(windowBounds.x + windowBounds.width, x + width);
+  const overlapTop = Math.max(windowBounds.y, y);
+  const overlapBottom = Math.min(windowBounds.y + windowBounds.height, y + height);
+  
+  if (overlapRight > overlapLeft && overlapBottom > overlapTop) {
+    const overlapArea = (overlapRight - overlapLeft) * (overlapBottom - overlapTop);
+    const windowArea = windowBounds.width * windowBounds.height;
+    return overlapArea >= windowArea * 0.5;
+  }
+  
+  return false;
 }
 
 // Hide Window
 function hideWindow() {
+  // Save current position before hiding
+  if (positionTimer) {
+    clearTimeout(positionTimer);
+  }
+  const [x, y] = mainWindow.getPosition();
+  store.set("windowPosition", { x, y });
+  
+  // Then hide the window
   if (process.platform === "darwin") app.hide();
   else mainWindow.minimize();
   mainWindow.hide();

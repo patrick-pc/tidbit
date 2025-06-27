@@ -10,6 +10,11 @@ body {
   font-size: 14px;
 }
 
+/* Make all interactive elements non-draggable */
+button, input, select, a {
+  -webkit-app-region: no-drag;
+}
+
 button {
   margin: 0;
   padding: 0;
@@ -43,6 +48,8 @@ input {
   height: 50px;
   background-color: #202123;
   color: #ececf1;
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
 }
 
 .navLeft,

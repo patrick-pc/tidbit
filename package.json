@@ -1,7 +1,7 @@
 {
   "name": "tidbit",
   "description": "Get instant access to Tidbit AI with a single shortcut key.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "scripts": {
     "start": "electron index.js",
