@@ -65,6 +65,7 @@ let browserView;
 let browserViews = {};
 let currentViewKey = "url1";
 let positionTimer;
+let isPinned = false;
 
 // Application Ready
 app.on("ready", async () => {
@@ -93,7 +94,11 @@ async function createMainWindow() {
   setConfig(mainWindow);
   setupBrowserView(storedSize);
 
-  mainWindow.on("blur", () => hideWindow());
+  mainWindow.on("blur", () => {
+    if (!isPinned) {
+      hideWindow();
+    }
+  });
   
   // Track window position changes
   mainWindow.on("move", () => {
@@ -485,6 +490,14 @@ ipcMain.on("update-urls", (event, urls) => {
   };
 
   switchToView(currentKey);
+});
+
+ipcMain.on("toggle-pin", (event, pinned) => {
+  isPinned = pinned;
+  // Update always on top behavior when pinned/unpinned
+  if (mainWindow) {
+    mainWindow.setAlwaysOnTop(true, isPinned ? "floating" : "normal");
+  }
 });
 
 // Event Listeners

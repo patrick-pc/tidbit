@@ -16,6 +16,7 @@ const settingsButton = document.getElementById("settingsButton");
 const settingsDialog = document.getElementById("settingsDialog");
 const saveButton = document.getElementById("saveButton");
 const cancelButton = document.getElementById("cancelButton");
+const pinButton = document.getElementById("pinButton");
 
 // Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
@@ -30,6 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
   settingsButton.addEventListener("click", showSettingsDialog);
   saveButton.addEventListener("click", saveSettings);
   cancelButton.addEventListener("click", hideSettingsDialog);
+  
+  // Pin button handler
+  pinButton.addEventListener("click", togglePin);
   
   // Load current URLs
   loadCurrentURLs();
@@ -221,3 +225,19 @@ ipcRenderer.on("urls-data", (event, urls) => {
   document.getElementById("url4").value = urls.url4;
   document.getElementById("url5").value = urls.url5;
 });
+
+// Pin functionality
+let isPinned = false;
+
+function togglePin() {
+  isPinned = !isPinned;
+  pinButton.classList.toggle("pinned", isPinned);
+  
+  // Clear the button and recreate with new icon
+  pinButton.innerHTML = `<i class="icon" data-lucide="${isPinned ? 'pin' : 'pin-off'}"></i>`;
+  
+  // Re-render the icon
+  lucide.createIcons();
+  
+  ipcRenderer.send("toggle-pin", isPinned);
+}

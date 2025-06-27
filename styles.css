@@ -11,7 +11,10 @@ body {
 }
 
 /* Make all interactive elements non-draggable */
-button, input, select, a {
+button,
+input,
+select,
+a {
   -webkit-app-region: no-drag;
 }
 
@@ -219,4 +222,18 @@ input {
 
 .dialog-button-save:hover {
   background-color: #6b8aaa;
+}
+
+/* Pin Button */
+#pinButton {
+  /* transition: opacity 0.2s; */
+  /* opacity: 0.5; */
+}
+
+#pinButton:hover {
+  opacity: 1;
+}
+
+#pinButton.pinned {
+  opacity: 1;
 }
